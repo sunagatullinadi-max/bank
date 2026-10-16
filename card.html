@@ -211,7 +211,7 @@ scene.environmentIntensity = 1.0;
 const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-4, 6, 8); scene.add(sun);
 const rim = new THREE.DirectionalLight(0xffffff, 0.6); rim.position.set(6, -3, -6); scene.add(rim);
 
-const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+const camera = new THREE.PerspectiveCamera(28, 1, 2, 80);
 
 const maxAniso = renderer.capabilities.getMaxAnisotropy();
 function tex(cnv, srgb) {
@@ -252,7 +252,7 @@ function build() {
     color: CONFIG.cardColor, metalness: CONFIG.metalness, roughness: 0.28, clearcoat: 0.4, clearcoatRoughness: 0.2,
   });
   materials.push(edgeMat);
-  card.add(new THREE.Mesh(bodyGeo, edgeMat));
+  card.add(new THREE.Mesh(bodyGeo, [new THREE.MeshBasicMaterial({ visible: false }), edgeMat]));
 
   const faceGeo = new THREE.ShapeGeometry(cardShape(W - bevel * 2, H - bevel * 2, R - bevel), 24);
   planarUV(faceGeo, W, H);
@@ -262,10 +262,11 @@ function build() {
       map: tex(side.color, true), roughnessMap: tex(side.rough), metalnessMap: tex(side.metal),
       color: 0xffffff, roughness: 1, metalness: 1,
       clearcoat: 0.35, clearcoatRoughness: 0.18,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
     });
     materials.push(m); return m;
   };
-  const z = T / 2 + 0.0004;
+  const z = T / 2 + 0.0015;
   const f = new THREE.Mesh(faceGeo, faceMat(makeSide(front, 11)));
   f.position.z = z; card.add(f);
   const b = new THREE.Mesh(faceGeo, faceMat(makeSide(back, 23)));
@@ -279,10 +280,11 @@ function build() {
   const chipMat = new THREE.MeshPhysicalMaterial({
     map: tex(ch.col, true), bumpMap: tex(ch.bump), bumpScale: 1.2, roughnessMap: tex(ch.rough),
     color: 0xffffff, metalness: 1, roughness: 1,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
   });
   materials.push(chipMat);
   const chip = new THREE.Mesh(chipGeo, chipMat);
-  chip.position.set(-W / 2 + 0.9 + CHIP.w / 2, 0.55, T / 2 - 0.002);
+  chip.position.set(-W / 2 + 0.9 + CHIP.w / 2, 0.55, T / 2 + 0.0005);
   card.add(chip);
 }
 
