@@ -36,39 +36,34 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-/* ================= НАСТРОЙКИ — всё, что можно менять ================= */
 const CONFIG = {
-  // Логотип: path из SVG (viewBox 594×615)
   logoPath: 'M0.54953 0L165.35 73.64C198.79 88.59 222.37 101.46 237.68 112.81C252.35 123.68 262.3 135.51 267.91 148.49C273.41 161.27 276.16 177.55 276.16 197.49V281.12C276.16 301.09 273.44 315.9 267.91 325.7C262.29 335.67 252.35 342.15 237.68 345.1C222.35 348.2 198.79 348.34 165.35 345.27L92.1895 338.54V503.87L0.519531 513.5V0H0.54953ZM172.45 142.6L92.2195 113.71L93.1696 265.32L172.46 279.57V142.6H172.45ZM464.5 464.72L414.53 469.99V275.41L407.94 313.62L367.16 475L293.77 482.72V131.03L357.07 159.33V346.17L363.69 311.65L397.33 177.33L464.5 207.35V464.73V464.72ZM485.59 216.74L562.33 251.04C571.44 255.09 578.09 259.32 582.53 263.77C586.85 268.11 589.84 273.51 591.5 279.99C593.16 286.41 593.99 295.11 593.99 306.09V410.2C593.99 421.18 593.16 429.58 591.5 435.43C589.84 441.34 586.83 445.74 582.44 448.61C577.94 451.54 571.32 453.48 562.33 454.44L531.87 457.65V594L485.62 614.67V216.74H485.59ZM561.41 416.96V288.21L531.87 278.02L532.099 417.07L561.44 416.96H561.41Z',
   logoViewBox: [594, 615],
   inkColor: '#161748',
   frontText: ['История', 'финтех-маркетинга'],
   backText: ['Спецпроект от канала', '«Рекламная индустрия России»'],
   font: 'Manrope',
-  cardColor: '#bfc0c6',     // цвет металла
+  cardColor: '#bfc0c6',
   metalness: 0.9,
-  roughness: 0.34,          // базовая шероховатость (меньше = зеркальнее)
-  lines: {                  // белые параллельные линии через всю карту
-    count: 2,               // сколько линий
-    angle: -24,             // наклон, градусы (0 — горизонтально)
-    spacing: 7,             // расстояние между линиями, мм
-    offset: -21,            // сдвиг всей группы поперёк линий, мм (минус — влево-вверх)
-    strands: 5,             // волосков в одной линии
-    width: 0.12,            // ширина линии (разброс волосков), мм
-    thickness: 0.2,         // толщина волосков (1 — исходная)
-    strength: 1.0,          // яркость, 0 — без линий
-    grain: 1.0,             // мелкое зерно металла
+  roughness: 0.34,
+  lines: {
+    count: 2,
+    angle: -24,
+    spacing: 7,
+    offset: -21,
+    strands: 5,
+    width: 0.12,
+    thickness: 0.2,
+    strength: 1.0,
+    grain: 1.0,
   },
-  frontTextSize: 5.33,      // кегль подписи спереди, мм (уменьшится, если не влезает)
+  frontTextSize: 5.33,
 };
-/* ===================================================================== */
 
-// Размеры по ISO/IEC 7810 ID-1, в сантиметрах
 const W = 8.56, H = 5.398, T = 0.076, R = 0.318;
-const PX = 2048, PY = Math.round(PX * H / W);   // разрешение текстур
-const mm = PX / (W * 10);                        // пикселей на мм
+const PX = 2048, PY = Math.round(PX * H / W);
+const mm = PX / (W * 10);
 
-// ---------- детерминированный рандом, чтобы царапины не «прыгали» ----------
 function rng(seed) { return () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646; }
 
 function canvas(w = PX, h = PY) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
@@ -77,12 +72,8 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
 }
 
-// ---------- фактура металла: микрозерно + параллельные линии ----------
-//  Линии рисуются и в карту шероховатости (видны в блике), и белым в цвет.
-//  Каждая линия — пучок тонких волосков с разрывами, как царапина.
 function paintLines(r, c, seed) {
   const L = CONFIG.lines, rand = rng(seed);
-  // мелкое зерно
   const img = r.getImageData(0, 0, PX, PY), d = img.data;
   for (let i = 0; i < d.length; i += 4) {
     const n = (rand() - 0.5) * 10 * L.grain;
@@ -91,8 +82,8 @@ function paintLines(r, c, seed) {
   r.putImageData(img, 0, 0);
 
   const a = L.angle * Math.PI / 180, dx = Math.cos(a), dy = Math.sin(a);
-  const nx = -dy, ny = dx;                         // нормаль — шаг между линиями
-  const reach = Math.hypot(PX, PY);                // длина с запасом: от края до края
+  const nx = -dy, ny = dx;
+  const reach = Math.hypot(PX, PY);
   const step = L.spacing * mm;
   const offset0 = L.offset * mm - step * (L.count - 1) / 2;
   [r, c].forEach(ctx => { ctx.lineCap = 'round'; });
@@ -101,10 +92,9 @@ function paintLines(r, c, seed) {
     const o = offset0 + k * step;
     const cx = PX / 2 + nx * o, cy = PY / 2 + ny * o;
     for (let s = 0; s < L.strands; s++) {
-      const j = (rand() - 0.5) * L.width * mm;   // разброс волосков внутри пучка
+      const j = (rand() - 0.5) * L.width * mm;
       const lw = (0.5 + rand() * 1.1) * L.thickness;
       const al = 0.25 + rand() * 0.75;
-      // волосок разбит на отрезки с разрывами
       let t = -reach / 2;
       while (t < reach / 2) {
         const seg = 40 + rand() * 260, gap = rand() < 0.75 ? rand() * 14 : 30 + rand() * 90;
@@ -132,10 +122,6 @@ function drawLines(ctx, lines, x, y, size, weight, lh = 1.12) {
   lines.forEach((l, i) => ctx.fillText(l, x, y + i * size * lh));
 }
 
-/*  Для каждой стороны рисуются три слоя одной разметки:
-    color — цвет, rough — шероховатость, metal — металличность.
-    Краска логотипа и текста — неметаллическая и чуть глянцевая,
-    поэтому блик на ней ведёт себя иначе, чем на металле.            */
 function makeSide(layout, seed) {
   const color = canvas(), rough = canvas(), metal = canvas();
   const c = color.getContext('2d'), r = rough.getContext('2d'), m = metal.getContext('2d');
@@ -149,7 +135,6 @@ function makeSide(layout, seed) {
   return { color, rough, metal };
 }
 
-// единая заливка «краской» во все три слоя
 function ink(L, fn, { col = CONFIG.inkColor, rough = 0.55, metal = 0 } = {}) {
   L.c.fillStyle = col; fn(L.c);
   const rv = Math.round(rough * 255); L.r.fillStyle = `rgb(${rv},${rv},${rv})`; fn(L.r);
@@ -157,11 +142,8 @@ function ink(L, fn, { col = CONFIG.inkColor, rough = 0.55, metal = 0 } = {}) {
 }
 
 const front = L => {
-  // логотип — правый верхний угол
   const lh = 15 * mm;
   ink(L, ctx => drawLogo(ctx, PX - 7 * mm - lh * 594 / 615, 6.5 * mm, lh));
-  // подпись — снизу слева
-  // кегль подбирается так, чтобы самая длинная строка влезла между полями
   const pad = 7 * mm, maxW = PX - pad * 2;
   let size = CONFIG.frontTextSize * mm;
   L.c.font = `800 ${size}px ${CONFIG.font}, system-ui, sans-serif`;
@@ -169,13 +151,10 @@ const front = L => {
   if (widest > maxW) size *= maxW / widest;
   const lineH = 1.08, n = CONFIG.frontText.length;
   ink(L, ctx => drawLines(ctx, CONFIG.frontText, pad, PY - 7 * mm - (n - 1) * size * lineH, size, 800, lineH));
-  window.__frontSize = size / mm;
 };
 
 const back = L => {
-  // магнитная полоса
   ink(L, ctx => ctx.fillRect(0, 5.5 * mm, PX, 8.6 * mm), { col: '#1c1c22', rough: 0.5, metal: 0.25 });
-  // поле для подписи и CVV — белое, со штриховкой
   const panel = (x, y, w, h) => {
     ink(L, ctx => { roundRect(ctx, x, y, w, h, 1.6 * mm); ctx.fill(); }, { col: '#efeff1', rough: 0.62, metal: 0 });
     L.c.save(); roundRect(L.c, x, y, w, h, 1.6 * mm); L.c.clip();
@@ -185,14 +164,12 @@ const back = L => {
   };
   panel(5.5 * mm, 18 * mm, 57 * mm, 8.5 * mm);
   panel(64.5 * mm, 18 * mm, 15.5 * mm, 8.5 * mm);
-  // подпись проекта и малый логотип
   ink(L, ctx => drawLines(ctx, CONFIG.backText, 5.5 * mm, PY - 10.6 * mm, 3 * mm, 700, 1.25));
   const lh = 9 * mm;
   ink(L, ctx => drawLogo(ctx, PX - 5.5 * mm - lh * 594 / 615, PY - 5.5 * mm - lh, lh));
 };
 
-// ---------- чип: контактные площадки + канавки между ними ----------
-const CHIP = { w: 1.18, h: 0.92, r: 0.13 };       // см
+const CHIP = { w: 1.18, h: 0.92, r: 0.13 };
 function makeChip() {
   const S = 512, SH = Math.round(S * CHIP.h / CHIP.w);
   const col = canvas(S, SH), bump = canvas(S, SH), rough = canvas(S, SH);
@@ -202,13 +179,12 @@ function makeChip() {
   c.fillStyle = g; c.fillRect(0, 0, S, SH);
   b.fillStyle = '#fff'; b.fillRect(0, 0, S, SH);
   r.fillStyle = 'rgb(60,60,60)'; r.fillRect(0, 0, S, SH);
-  // раскладка контактов, в долях ширины/высоты
   const lw = S * 0.012;
   const lines = [
-    [0.27, 0, 0.27, 1], [0.73, 0, 0.73, 1],                    // две вертикали
-    [0, 0.33, 0.27, 0.33], [0, 0.66, 0.27, 0.66],               // левая колонка
-    [0.73, 0.33, 1, 0.33], [0.73, 0.66, 1, 0.66],               // правая колонка
-    [0.27, 0.3, 0.73, 0.3], [0.27, 0.52, 0.73, 0.52],           // центр
+    [0.27, 0, 0.27, 1], [0.73, 0, 0.73, 1],
+    [0, 0.33, 0.27, 0.33], [0, 0.66, 0.27, 0.66],
+    [0.73, 0.33, 1, 0.33], [0.73, 0.66, 1, 0.66],
+    [0.27, 0.3, 0.73, 0.3], [0.27, 0.52, 0.73, 0.52],
     [0.42, 0, 0.42, 0.3], [0.58, 0, 0.58, 0.3],
     [0.5, 0.52, 0.5, 1],
   ];
@@ -220,9 +196,8 @@ function makeChip() {
   return { col, bump, rough };
 }
 
-// ---------- three.js ----------
 const stage = document.getElementById('stage');
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
@@ -255,7 +230,6 @@ function cardShape(w, h, r) {
   return s;
 }
 
-// UV в долях полной карты, чтобы текстура 1:1 ложилась на разметку
 function planarUV(geo, w, h) {
   const p = geo.attributes.position, uv = geo.attributes.uv;
   for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + w / 2) / w, (p.getY(i) + h / 2) / h);
@@ -270,7 +244,6 @@ function build() {
   card.clear(); materials.forEach(m => m.dispose()); materials = [];
 
   const bevel = 0.012;
-  // корпус со скошенной кромкой — по ней тоже бежит блик
   const bodyGeo = new THREE.ExtrudeGeometry(cardShape(W - bevel * 2, H - bevel * 2, R - bevel), {
     depth: T - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 4, curveSegments: 24,
   });
@@ -288,7 +261,7 @@ function build() {
     const m = new THREE.MeshPhysicalMaterial({
       map: tex(side.color, true), roughnessMap: tex(side.rough), metalnessMap: tex(side.metal),
       color: 0xffffff, roughness: 1, metalness: 1,
-      clearcoat: 0.35, clearcoatRoughness: 0.18,   // тонкий лак поверх — второй, более резкий блик
+      clearcoat: 0.35, clearcoatRoughness: 0.18,
     });
     materials.push(m); return m;
   };
@@ -298,7 +271,6 @@ function build() {
   const b = new THREE.Mesh(faceGeo, faceMat(makeSide(back, 23)));
   b.rotation.y = Math.PI; b.position.z = -z; card.add(b);
 
-  // чип
   const ch = makeChip();
   const chipGeo = new THREE.ExtrudeGeometry(cardShape(CHIP.w, CHIP.h, CHIP.r), {
     depth: 0.004, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.004, bevelSegments: 2, curveSegments: 12,
@@ -314,11 +286,10 @@ function build() {
   card.add(chip);
 }
 
-// ---------- камера под размер окна ----------
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
   renderer.setSize(w, h); camera.aspect = w / h;
-  const fit = 1.32;                       // запас по краям
+  const fit = 1.32;
   const vFov = THREE.MathUtils.degToRad(camera.fov);
   const distH = (H * fit / 2) / Math.tan(vFov / 2);
   const distW = (W * fit / 2) / Math.tan(vFov / 2) / camera.aspect;
@@ -327,8 +298,6 @@ function resize() {
 }
 addEventListener('resize', resize);
 
-// ---------- взаимодействие ----------
-// наклон за курсором + перетаскивание для поворота; отпустили — карта встаёт лицом или оборотом
 const state = { spin: 0, spinTarget: 0, vel: 0, tiltX: 0, tiltY: 0, tx: 0, ty: 0, drag: false, lastX: 0, moved: 0 };
 stage.addEventListener('pointermove', e => {
   const r = stage.getBoundingClientRect();
@@ -346,7 +315,7 @@ stage.addEventListener('pointerdown', e => {
 const release = () => {
   if (!state.drag) return;
   state.drag = false; stage.classList.remove('dragging');
-  const proj = state.spin + state.vel * 12;          // инерция броска
+  const proj = state.spin + state.vel * 12;
   state.spinTarget = Math.round(proj / Math.PI) * Math.PI;
 };
 stage.addEventListener('pointerup', release);
@@ -356,11 +325,10 @@ document.getElementById('flip').addEventListener('click', () => {
   state.spinTarget = (Math.round(state.spinTarget / Math.PI) + 1) * Math.PI;
 });
 
-// ---------- цикл ----------
 const clock = new THREE.Clock();
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.1), t = clock.elapsedTime;
-  const k = (f) => 1 - Math.pow(1 - f, dt * 60);   // сглаживание не зависит от частоты кадров
+  const k = (f) => 1 - Math.pow(1 - f, dt * 60);
   if (!state.drag) state.spin += (state.spinTarget - state.spin) * k(0.08);
   state.tiltX += (state.tx - state.tiltX) * k(0.07);
   state.tiltY += (state.ty - state.tiltY) * k(0.07);
@@ -369,17 +337,14 @@ function tick() {
     state.spin + state.tiltY + Math.sin(t * 0.45) * 0.06,
     Math.sin(t * 0.35) * 0.015);
   card.position.y = Math.sin(t * 0.8) * 0.06;
-  // окружение медленно поворачивается — блики «плывут» даже без мыши
   scene.environmentRotation.y = t * 0.12 + state.tiltY * 1.5;
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
 
-// ждём шрифт, иначе canvas нарисует текст системным
 (async () => {
   try { await document.fonts.load(`800 40px ${CONFIG.font}`); await document.fonts.load(`700 40px ${CONFIG.font}`); } catch (e) {}
   build(); resize(); tick();
-  window.__ready = true;
 })();
 </script>
 </body>
